@@ -1,0 +1,170 @@
+
+http://ubuntuforums.org/showthread.php?t=1180792
+
+
+Thread: Howto: Install Boost from source
+
+    Howto: Install Boost from source
+
+        Welcome. This a guide on how to install the Boost libraries from source. Although the boost libraries are available in the universe repository there are people who have tried to install from source for one reason or another (myself included) and, because of the unfamiliar method by which Boost choose to create their libraries, fall into trouble or else never really understand what to do (even though it's not all that hard actually).
+        This is only a very simple guide on how to get the source compiled and installed and I wont go into more advanced topics on how to customize the installation (because I don't know myself) or on how to cross-compile (since I've tried and given up on that -- the problem being that the boost build system doesn't use the correct cross-compiling binaries for compiling and creating the libraries and it's next to Alchemy trying to understand how to get the thing to use the correct ones. As a last resort, not even creating symlinks from the the cross-compiling binary to the corresponding normal build binary didn't work!).
+
+        -1) General Information
+
+        This guide is specifically written for boost libraries version 1.39.0. The general idea of what we're doing will probably still apply for some of the more recent older library version; but, there will be crucial differences, like the fact that the file configure will exist instead of bootstrap.sh.
+
+        0) Pre-requisites
+
+        0.1)
+        You will need the necessary compiling tools (g++, ld, etc...); so, first, install them:
+        Code:
+
+        sudo aptitude install build-essential g++
+
+        0.2)
+        You will need the source code! Boost's website is not the best when it comes to finding where things are, so just navigate to their getting started page and under the section Get Boost follow the link to the download page and download tar.bz2 file (the tar.7z file has Windows line-terminators, so reading those files in Linux will cause errors). Incidentally, that getting started page is the general reference from which I've derived this guide (along with a bit of trial and much error).
+
+        1) Compile the library
+
+        1.1)
+        Go to where you downloaded the directory and uncompress it:
+        Code:
+
+        cd download_location
+        tar xjf (Your file  ex: boost_1_39_0.tar.bz2)
+
+        Note that the uncompressed source is over 250Mb; so if space is an issue, make the necessary sacrifices!
+        Then change directory into the boost directory:
+        Code:
+
+        cd ./(Your file  ex: boost_1_39_0.tar.bz2)
+
+        1.2)
+        Next, we'll need to build the bjam binary and perhaps also set some options on what to compile and where to. Read the next three sub-sections carefully and read it all before you do anything!
+
+        1.2.1)
+        Firstly, you will not want to compile the whole boost library since that means compiling a lot of libraries that you don't want or wont use. So, to see a list of the libraries that need compiling, run:
+        Code:
+
+        ./bootstrap.sh --show-libraries
+
+        Pick which ones you want and remember them: I'll be choosing filesystem, program_options and system. Note that picking system is needed since it contains the error class that filesystem uses, and I bet that, since the majority of you readers will be looking to compile the filesystem library, this means cutting a few problems out later on for a lot of you!
+        What you'll need to run is the command:
+        Code:
+
+        ./bootstrap.sh --with-library=filesytem,program_options,system
+
+        But don't do that just yet: keep reading!
+        If you do want to compile the whole damned thing, then you don't need to bother with the command above: you'll just run bootstrap.sh as it is:
+        Code:
+
+        ./bootstrap.sh
+
+        Again, don't run anything yet: still keep on reading!
+        
+        * After this step, I just went with the boost terminal install help, but read on if you need to*
+
+        1.2.2)
+        Next, you'll need to consider where you want the library installed to. By default, the header files are installed to /usr/local/include, and the libraries themselves are installed to /usr/local/lib. These locations will be more than adequate (it's not recommended to install stuff to /usr/include, /usr/include/lib or /lib); but, if you do want/need to specify a different location, you'll need to run bootstrap.sh like this:
+        Code:
+
+        ./bootstrap --libdir=/my/lib/dir --includedir=/my/include/dir
+
+        which will install the libraries to /my/lib/dir and the header files to /my/include/dir.
+        Note: there is a bug in that the libraries are installed to /lib and not /usr/local/lib by default; so I'd recommend explicitly telling the build process to install to /usr/local/lib. Do this by adding the flag: --exec-prefix=/usr/local.
+        Still, don't run anything yet! Keep reading!
+
+        1.2.3)
+        OK, now bring the info from the last two sub-sections together: you'll want the command:
+        Code:
+
+        ./bootstrap.sh --exec-prefix=/usr/local --with-libraries=desired_list_of_libs --libdir=/my/lib/dir --includedir=/my/include/dir
+
+        For example, I want to only install the filesystem, program_options, and system libraries, and just to the default lib and include directories; so, I'll personally run:
+        Code:
+
+        ./bootstrap.sh --with-libraries=filesystem,program_options,system --exec-prefix=/usr/local
+
+        Having done this (or something similar depending on what you want to do) you'll see the message:
+        Bootstrapping is done. To build, run:
+
+        ./bjam
+
+        To adjust configuration, edit 'project-config.jam'.
+        Further information:
+
+        - Command line help:
+        ./bjam --help
+
+        - Getting started guide:
+        http://www.boost.org/more/getting_st...-variants.html
+
+        - Boost.Build documentation:
+        http://www.boost.org/boost-build2/doc/html/index.html
+        At this point, you can then do the compiling proper...
+
+        1.2.4)
+        Run the command:
+        Code:
+
+        ./bjam
+
+        And that's it!
+
+        2) Installation
+
+        Immediately after compiling, and before we install them, the header files will be in the directory boost, and the libraries in the directory stage/lib. To install them, just run:
+        Code:
+
+        sudo ./bjam install
+
+        Note that, on my system, that command seems to hang for a while; so, give it a chance before killing it.
+
+        Now, there is one "bug" in the installation process. The installation procedure does not create a symlink called libboost_filesystem.so. It's not really a problem, but it's very useful if it does exist. Look in your library directory to see if it's there, or else create it:
+        Code:
+
+        sudo ln -s /usr/local/lib/libboost_filesystem-gcc43-mt.so /usr/local/lib/libboost_filesystem.so
+
+        And change /usr/local/lib if you changed where you installed your libraries to at stage 1.2.3, and amend libboost_filesystem-gcc43-mt.so if it's different on your system. (Post a comment if you are having trouble with this since the names will probably be different from system-to-system and don't do anything if you're not at all sure on how libraries are named and symlinked).
+
+        3) Using the libraries
+
+        This bit normally causes a few problems, so read it carefully!
+
+        3.1)
+        Include your header files as usual in your code like:
+        #include <boost/filesystem.hpp>
+        and then tell your compiler where the include libraries are with a -I flag:
+        Code:
+
+        g++ -I/usr/local/include/boost-1_39 ...
+
+        If you changed your include directory at stage 1.2.3 by issuing:
+        ./bootstrap.sh --includedir=/my/include/dir
+        then you'll need to amend the g++ command to:
+        Code:
+
+        g++ -I/my/include/dir/boost-1_39
+
+        3.2)
+        Then, we'll also need to make sure we can link to the libraries.
+        If you did not change the directory to where the libraries are installed to from the default at stage 1.2.3, then simply run:
+        Code:
+
+        sudo ldconfig
+
+        And you can start linking the library as usual:
+        Code:
+
+        g++ -lboost_filesystem ...
+
+        If you did change the lib directory at stage 1.2.3 by running:
+        ./bootstrap.sh --libdir=/my/lib/dir
+        then you'll need to run the linking stage as:
+        Code:
+
+        g++ -L/my/lib/dir -lboost_filesystem
+
+        Hopefully, that's it! You should now be able to use boost!
+
+
